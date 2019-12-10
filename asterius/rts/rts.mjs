@@ -166,7 +166,6 @@ export async function newAsteriusInstance(req) {
       );
       __asterius_exports.rts_checkSchedStatus(tid);
     },
-    FloatCBits: __asterius_float_cbits,
     stdio: {
       stdout: () => __asterius_fs.readSync(1),
       stderr: () => __asterius_fs.readSync(2)
