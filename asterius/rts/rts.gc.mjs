@@ -3,6 +3,7 @@ import * as FunTypes from "./rts.funtypes.mjs";
 import { Memory } from "./rts.memory.mjs";
 import * as rtsConstants from "./rts.constants.mjs";
 import { stg_arg_bitmaps } from "./rts.autoapply.mjs";
+import performance from "perf_hooks";
 
 function bdescr(c) {
   const nc = Number(c);
@@ -16,11 +17,13 @@ export class GC {
     stableptr_manager,
     stablename_manager,
     scheduler,
+    tracer,
     info_tables,
     export_stableptrs,
     symbol_table,
     reentrancy_guard,
     yolo,
+    gcStatistics,
     gc_threshold
   ) {
     this.memory = memory;
@@ -28,12 +31,15 @@ export class GC {
     this.stablePtrManager = stableptr_manager;
     this.stableNameManager = stablename_manager;
     this.scheduler = scheduler;
+    this.tracer = tracer;
     this.infoTables = info_tables;
     for (const p of export_stableptrs) this.stablePtrManager.newStablePtr(p);
     this.symbolTable = symbol_table;
     this.reentrancyGuard = reentrancy_guard;
     this.yolo = yolo;
+    this.gcStatistics = gcStatistics;
     this.gcThreshold = gc_threshold;
+
     this.closureIndirects = new Map();
     this.liveMBlocks = new Set();
     this.deadMBlocks = new Set();
@@ -686,8 +692,10 @@ export class GC {
    * Perform GC, using scheduler TSOs as roots
    */
   performGC() {
+    var beginTime = performance.performance.now();
     if (this.yolo || this.heapAlloc.liveSize() < this.gcThreshold) {
       this.updateNursery();
+      if (this.gcStatistics) this.tracer.traceMinorGC(beginTime);
       return;
     }
     this.reentrancyGuard.enter(1);
@@ -743,5 +751,7 @@ export class GC {
     this.deadMBlocks.clear();
     this.liveJSVals.clear();
     this.reentrancyGuard.exit(1);
+    
+    if (this.gcStatistics) this.tracer.traceMajorGC(beginTime);
   }
 }

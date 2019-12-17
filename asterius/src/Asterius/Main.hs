@@ -230,6 +230,7 @@ genDefEntry task =
         [ "module.then(m => rts.newAsteriusInstance(Object.assign(req, {module: m}))).then(async i => {\n",
           "try {\n",
           "i.exports.hs_init();\n",
+          if gcStatistics task then "i.exports.context.tracer.traceInitDone();\n" else "",
           "await i.exports.main();\n",
           "} catch (err) {\n",
           "console.log(i.stdio.stdout());\n",
@@ -238,6 +239,7 @@ genDefEntry task =
           "}\n",
           "if (i.stdio.stdout().toString().length) console.log(i.stdio.stdout());\n",
           "if (i.stdio.stderr().toString().length) console.log(i.stdio.stderr());\n",
+          if gcStatistics task then "i.exports.context.tracer.displayGCStatistics();\n" else "",
           "});\n"
         ]
     ]

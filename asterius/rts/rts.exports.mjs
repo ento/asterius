@@ -6,6 +6,7 @@ export class Exports {
     reentrancy_guard,
     symbol_table,
     scheduler,
+    tracer,
     exports,
     stableptr_manager
   ) {
@@ -14,6 +15,7 @@ export class Exports {
       reentrancyGuard: reentrancy_guard,
       symbolTable: symbol_table,
       scheduler: scheduler,
+      tracer: tracer,
       stablePtrManager: stableptr_manager
     });
     Object.assign(this, exports);

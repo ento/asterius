@@ -83,11 +83,13 @@ export async function newAsteriusInstance(req) {
       __asterius_stableptr_manager,
       __asterius_stablename_manager,
       __asterius_scheduler,
+      __asterius_tracer,
       req.infoTables,
       req.exportStablePtrs,
       req.symbolTable,
       __asterius_reentrancy_guard,
       req.yolo,
+      req.gcStatistics,
       req.gcThreshold
     ),
     __asterius_exception_helper = new ExceptionHelper(
@@ -109,6 +111,7 @@ export async function newAsteriusInstance(req) {
       __asterius_reentrancy_guard,
       req.symbolTable,
       __asterius_scheduler,
+      __asterius_tracer,
       req.exports,
       __asterius_stableptr_manager
     ),
