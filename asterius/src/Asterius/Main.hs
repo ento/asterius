@@ -115,6 +115,7 @@ parseTask args = case err_msgs of
             \s t -> t {exportFunctions = fromString s : exportFunctions t},
           str_opt "extra-root-symbol" $
             \s t -> t {extraRootSymbols = fromString s : extraRootSymbols t},
+          bool_opt "gc-stats" $ \t -> t {gcStatistics = True},
           str_opt "gc-threshold" $ \s t -> t {gcThreshold = read s}
         ]
         args
@@ -194,6 +195,8 @@ genReq task LinkReport {..} =
       if yolo task then "true" else "false",
       ", gcThreshold: ",
       intHex (gcThreshold task),
+      ", gcStatistics: ",
+      if gcStatistics task then "true" else "false",
       "}",
       ";\n"
     ]
