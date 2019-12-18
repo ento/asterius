@@ -123,12 +123,18 @@ export class Tracer {
     for(const n of counters.liveMBlocksNo) {
       totalLiveMBlocksNo += n;
     }
-    var liveMBlocksAverageNo = totalLiveMBlocksNo / counters.liveMBlocksNo.length;
+    var liveMBlocksAverageNo = "n/a";
+    if (counters.liveMBlocksNo.length != 0) 
+      liveMBlocksAverageNo = totalLiveMBlocksNo / counters.liveMBlocksNo.length;
     var aliveVSDeadMBlocks = 0;
     for(const n of counters.aliveVSDeadMBlocks) {
       aliveVSDeadMBlocks += n;
     }
-    aliveVSDeadMBlocks /= counters.aliveVSDeadMBlocks.length;
+    if (counters.aliveVSDeadMBlocks.length == 0) {
+      aliveVSDeadMBlocks = "n/a";
+    } else {
+      aliveVSDeadMBlocks /= counters.aliveVSDeadMBlocks.length;
+    }
     console.log("Garbage Collection Statistics", {
       num_major_GCs: counters.num_major_GCs,
       num_minor_GCs: counters.num_minor_GCs,
