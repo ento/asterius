@@ -4,10 +4,10 @@ export class Tracer {
   constructor(logger, syms, gcStatistics) {
     this.logger = logger;
     this.symbolLookupTable = {};
-    this.gcStatistics = gcStatistics;
     for (const [k, v] of Object.entries(syms)) this.symbolLookupTable[v] = k;
-    this.stats = {
-      gc_wall_ms: 0,
+    this.gcStatistics = gcStatistics;
+    this.counters = {
+      gc_wall_s: 0,
       num_minor_GCs: 0,
       num_major_GCs: 0,
       liveMBlocksNo: [],
@@ -17,8 +17,28 @@ export class Tracer {
     Object.freeze(this);
   }
 
+  /**
+   * Force @param arg to be evaluated, i.e.
+   * in case it is a callback, @param arg is called
+   * and the result returned. Useful when tracing/logging
+   * data that is expensive to compute, so that the actual
+   * value is computed only if the logging level is
+   * appropriate.
+   */
+  static force(arg) {
+    if (typeof arg === "function") {
+      return arg();
+    } else {
+      return arg;
+    }
+  }
+
+  /**
+   * Return the number of seconds passed since
+   * the app has started.
+   */
   now() {
-    return performance.now();
+    return performance.now() / 1000.0;
   }
 
   traceCmm(f) {
@@ -40,59 +60,84 @@ export class Tracer {
     ]);
   }
 
+  /**
+   * Trace the end of the initialization of
+   * the runtime system (INIT)
+   */
   traceInitDone() {
-    this.stats.init_wall_ms = this.now();
+    if (!this.gcStatistics) return;
+    this.counters.init_wall_s = this.now();
   }
 
+  /**
+   * Trace the end of a garbage collection.
+   * @param beginTime is the time when the GC has started
+   */
   traceMinorGC(beginTime) {
-    this.stats.gc_wall_ms += this.now() - beginTime;
-    this.stats.num_minor_GCs += 1;
+    if (!this.gcStatistics) return;
+    this.counters.gc_wall_s += this.now() - Tracer.force(beginTime);
+    this.counters.num_minor_GCs += 1;
   }
 
+  /**
+   * Trace the end of a garbage collection.
+   * @param beginTime is the time when the GC has started
+   */
   traceMajorGC(beginTime) {
-    this.stats.gc_wall_ms += this.now() - beginTime;
-    this.stats.num_major_GCs += 1;
+    if (!this.gcStatistics) return;
+    this.counters.gc_wall_s += this.now() - Tracer.force(beginTime);
+    this.counters.num_major_GCs += 1;
   }
 
-  traceLiveMBlocksNo(liveMBlocksNo){
-    this.stats.liveMBlocksNo.push(liveMBlocksNo);
+  /**
+   * Trace the number of megablocks that are found to be
+   * alive during a garbage collection.
+   */
+  traceAliveDeadMBlocks(arg) {
+    if (!this.gcStatistics) return;
+    arg = Tracer.force(arg);
+    this.counters.liveMBlocksNo.push(arg.alive);
+    this.counters.aliveVSDeadMBlocks.push(arg.alive / arg.dead);
   }
 
-  traceAliveVSDeadMBlocks(ratio) {
-    this.stats.aliveVSDeadMBlocks.push(ratio);
-  }
-
+  /**
+   * Trace the allocation of new megablocks.
+   * Called from {@link Memory.getMBlocks}
+   * @param n The number of newly allocated megablocks
+   */
   traceGetMBlocks(n) {
-    this.stats.allocatedMBlocks += n;
+    if (!this.gcStatistics) return;
+    this.counters.allocatedMBlocks += Tracer.force(n);
   }
 
+  /**
+   * Display various GC statistics.
+   */
   displayGCStatistics() {
-    var stats = this.stats;
-    var total_wall_ms = this.now();
-    var gc_wall_ms = stats.gc_wall_ms;
-    var mutator_wall_ms = total_wall_ms - gc_wall_ms - stats.init_wall_ms;
+    if (!this.gcStatistics) return;
+    var counters = this.counters;
+    var total_wall_s = this.now();
+    var gc_wall_s = counters.gc_wall_s;
+    var mutator_wall_s = total_wall_s - gc_wall_s - counters.init_wall_s;
     var totalLiveMBlocksNo = 0;
-    for(const n of stats.liveMBlocksNo) {
+    for(const n of counters.liveMBlocksNo) {
       totalLiveMBlocksNo += n;
     }
-    var liveMBlocksAverageNo = totalLiveMBlocksNo / stats.liveMBlocksNo.length;
+    var liveMBlocksAverageNo = totalLiveMBlocksNo / counters.liveMBlocksNo.length;
     var aliveVSDeadMBlocks = 0;
-    for(const n of stats.aliveVSDeadMBlocks) {
+    for(const n of counters.aliveVSDeadMBlocks) {
       aliveVSDeadMBlocks += n;
     }
-    aliveVSDeadMBlocks /= stats.aliveVSDeadMBlocks.length;
-    if (stats.num_major_GCs != stats.aliveVSDeadMBlocks.length || stats.num_major_GCs != stats.liveMBlocksNo.length) {
-      throw "Error: inconsistent data gathered by GC statistics"
-    }
+    aliveVSDeadMBlocks /= counters.aliveVSDeadMBlocks.length;
     console.log("Garbage Collection Statistics", {
-      num_major_GCs: stats.num_major_GCs,
-      num_minor_GCs: stats.num_minor_GCs,
+      num_major_GCs: counters.num_major_GCs,
+      num_minor_GCs: counters.num_minor_GCs,
       average_live_mblocks: liveMBlocksAverageNo,
       alive_vs_dead_mblocks: aliveVSDeadMBlocks,
-      allocated_mblocks: stats.allocatedMBlocks,
-      init_wall_seconds: stats.init_wall_ms / 1000.0,
-      mutator_wall_seconds: mutator_wall_ms / 1000.0,
-      GC_wall_seconds: gc_wall_ms / 1000.0,
+      allocated_mblocks: counters.allocatedMBlocks,
+      init_wall_seconds: counters.init_wall_s,
+      mutator_wall_seconds: mutator_wall_s,
+      GC_wall_seconds: gc_wall_s,
     });
   }
 }

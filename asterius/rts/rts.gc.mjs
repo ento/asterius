@@ -692,7 +692,7 @@ export class GC {
     var beginTime = this.tracer.now();
     if (this.yolo || this.heapAlloc.liveSize() < this.gcThreshold) {
       this.updateNursery();
-      if (this.tracer.gcStatistics) this.tracer.traceMinorGC(beginTime);
+      this.tracer.traceMinorGC(beginTime);
       return;
     }
     this.reentrancyGuard.enter(1);
@@ -748,6 +748,6 @@ export class GC {
     this.deadMBlocks.clear();
     this.liveJSVals.clear();
     this.reentrancyGuard.exit(1);
-    if (this.tracer.gcStatistics) this.tracer.traceMajorGC(beginTime);
+    this.tracer.traceMajorGC(beginTime);
   }
 }

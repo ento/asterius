@@ -116,11 +116,10 @@ export class HeapAlloc {
         n = this.memory.i16Load(bd + rtsConstants.offset_bdescr_node);
       this.memory.freeMBlocks(p, n);
     }
-    if (this.tracer.gcStatistics) {
+    this.tracer.traceAliveDeadMBlocks(() => {
       var ln = live_mblocks.size;
-      this.tracer.traceLiveMBlocksNo(ln);
-      this.tracer.traceAliveVSDeadMBlocks(ln / (this.mgroups.size - ln));
-    }
+      return {alive: ln, dead: (this.mgroups.size - ln)};
+    });
     for (const bd of Array.from(this.mgroups)) {
       if (!live_mblocks.has(bd)) {
         this.mgroups.delete(bd);
