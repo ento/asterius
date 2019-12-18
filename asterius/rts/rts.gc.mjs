@@ -23,7 +23,6 @@ export class GC {
     symbol_table,
     reentrancy_guard,
     yolo,
-    gcStatistics,
     gc_threshold
   ) {
     this.memory = memory;
@@ -37,7 +36,6 @@ export class GC {
     this.symbolTable = symbol_table;
     this.reentrancyGuard = reentrancy_guard;
     this.yolo = yolo;
-    this.gcStatistics = gcStatistics;
     this.gcThreshold = gc_threshold;
 
     this.closureIndirects = new Map();
@@ -695,7 +693,7 @@ export class GC {
     var beginTime = performance.performance.now();
     if (this.yolo || this.heapAlloc.liveSize() < this.gcThreshold) {
       this.updateNursery();
-      if (this.gcStatistics) this.tracer.traceMinorGC(beginTime);
+      if (this.tracer.gcStatistics) this.tracer.traceMinorGC(beginTime);
       return;
     }
     this.reentrancyGuard.enter(1);
@@ -751,7 +749,6 @@ export class GC {
     this.deadMBlocks.clear();
     this.liveJSVals.clear();
     this.reentrancyGuard.exit(1);
-    
-    if (this.gcStatistics) this.tracer.traceMajorGC(beginTime);
+    if (this.tracer.gcStatistics) this.tracer.traceMajorGC(beginTime);
   }
 }

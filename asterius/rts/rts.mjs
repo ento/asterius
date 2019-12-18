@@ -35,7 +35,11 @@ export async function newAsteriusInstance(req) {
       : {},
     __asterius_reentrancy_guard = new ReentrancyGuard(["Scheduler", "GC"]),
     __asterius_logger = new EventLogManager(req.symbolTable),
-    __asterius_tracer = new Tracer(__asterius_logger, req.symbolTable),
+    __asterius_tracer = new Tracer(
+      __asterius_logger,
+      req.symbolTable,
+      req.gcStatistics
+    ),
     __asterius_wasm_instance = null,
     __asterius_wasm_table = new WebAssembly.Table({
       element: "anyfunc",
@@ -89,7 +93,6 @@ export async function newAsteriusInstance(req) {
       req.symbolTable,
       __asterius_reentrancy_guard,
       req.yolo,
-      req.gcStatistics,
       req.gcThreshold
     ),
     __asterius_exception_helper = new ExceptionHelper(
