@@ -1,8 +1,9 @@
 import * as rtsConstants from "./rts.constants.mjs";
 
 export class HeapAlloc {
-  constructor(memory) {
+  constructor(memory, tracer) {
     this.memory = memory;
+    this.tracer = tracer;
     this.currentPools = [undefined, undefined];
     this.mgroups = new Set();
     Object.freeze(this);
@@ -114,6 +115,11 @@ export class HeapAlloc {
       const p = bd - rtsConstants.offset_first_bdescr,
         n = this.memory.i16Load(bd + rtsConstants.offset_bdescr_node);
       this.memory.freeMBlocks(p, n);
+    }
+    if (this.tracer.gcStatistics) {
+      var ln = live_mblocks.size;
+      this.tracer.traceLiveMBlocksNo(ln);
+      this.tracer.traceAliveVSDeadMBlocks(ln / (this.mgroups.size - ln));
     }
     for (const bd of Array.from(this.mgroups)) {
       if (!live_mblocks.has(bd)) {

@@ -5,7 +5,8 @@ function mask(n) {
 }
 
 export class Memory {
-  constructor() {
+  constructor(tracer) {
+    this.tracer = tracer;
     this.memory = undefined;
     this.staticMBlocks = undefined;
     this.i8View = undefined;
@@ -179,6 +180,7 @@ export class Memory {
   }
 
   getMBlocks(n) {
+    if (this.tracer.gcStatistics) this.tracer.traceGetMBlocks(n);
     const m = mask(n);
     for (let i = BigInt(0); i <= BigInt(this.capacity - n); ++i) {
       const mi = m << i;

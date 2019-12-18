@@ -3,7 +3,6 @@ import * as FunTypes from "./rts.funtypes.mjs";
 import { Memory } from "./rts.memory.mjs";
 import * as rtsConstants from "./rts.constants.mjs";
 import { stg_arg_bitmaps } from "./rts.autoapply.mjs";
-import performance from "perf_hooks";
 
 function bdescr(c) {
   const nc = Number(c);
@@ -690,7 +689,7 @@ export class GC {
    * Perform GC, using scheduler TSOs as roots
    */
   performGC() {
-    var beginTime = performance.performance.now();
+    var beginTime = this.tracer.now();
     if (this.yolo || this.heapAlloc.liveSize() < this.gcThreshold) {
       this.updateNursery();
       if (this.tracer.gcStatistics) this.tracer.traceMinorGC(beginTime);

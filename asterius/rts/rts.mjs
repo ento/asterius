@@ -48,14 +48,15 @@ export async function newAsteriusInstance(req) {
     __asterius_wasm_memory = new WebAssembly.Memory({
       initial: req.staticMBlocks * (rtsConstants.mblock_size / 65536)
     }),
-    __asterius_memory = new Memory(),
+    __asterius_memory = new Memory(__asterius_tracer),
     __asterius_memory_trap = new MemoryTrap(
       __asterius_logger,
       req.symbolTable,
       __asterius_memory
     ),
     __asterius_heapalloc = new HeapAlloc(
-      __asterius_memory
+      __asterius_memory,
+      __asterius_tracer
     ),
     __asterius_stableptr_manager = new StablePtrManager(),
     __asterius_stablename_manager = new StableNameManager(
