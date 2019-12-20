@@ -689,10 +689,10 @@ export class GC {
    * Perform GC, using scheduler TSOs as roots
    */
   performGC() {
-    var beginTime = this.tracer.now();
+    this.tracer.traceStartGC();
     if (this.yolo || this.heapAlloc.liveSize() < this.gcThreshold) {
       this.updateNursery();
-      this.tracer.traceMinorGC(beginTime);
+      this.tracer.traceCancelGC();
       return;
     }
     this.reentrancyGuard.enter(1);
@@ -748,6 +748,6 @@ export class GC {
     this.deadMBlocks.clear();
     this.liveJSVals.clear();
     this.reentrancyGuard.exit(1);
-    this.tracer.traceMajorGC(beginTime);
+    this.tracer.traceEndGC();
   }
 }

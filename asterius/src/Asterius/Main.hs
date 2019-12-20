@@ -230,7 +230,7 @@ genDefEntry task =
         [ "module.then(m => rts.newAsteriusInstance(Object.assign(req, {module: m}))).then(async i => {\n",
           "try {\n",
           "i.exports.hs_init();\n",
-          if gcStatistics task then "i.exports.context.tracer.traceInitDone();\n" else "",
+          if gcStatistics task then "i.exports.context.tracer.traceEndInit();\n" else "",
           "await i.exports.main();\n",
           "} catch (err) {\n",
           "console.log(i.stdio.stdout());\n",

@@ -8,11 +8,12 @@ export class Tracer {
     this.gcStatistics = gcStatistics;
     this.counters = {
       gc_wall_s: 0,
-      num_minor_GCs: 0,
-      num_major_GCs: 0,
+      num_canceled_GCs: 0,
+      num_GCs: 0,
       liveMBlocksNo: [],
       aliveVSDeadMBlocks: [],
-      allocatedMBlocks: 0
+      allocatedMBlocks: 0,
+      last_gc_started: 0,
     };
     Object.freeze(this);
   }
@@ -64,29 +65,36 @@ export class Tracer {
    * Trace the end of the initialization of
    * the runtime system (INIT)
    */
-  traceInitDone() {
+  traceEndInit() {
     if (!this.gcStatistics) return;
     this.counters.init_wall_s = this.now();
   }
 
   /**
-   * Trace the end of a garbage collection.
-   * @param beginTime is the time when the GC has started
+   * Trace the request of a garbage collection
+   * i.e. {@link GC.performGC}.
    */
-  traceMinorGC(beginTime) {
+  traceStartGC() {
     if (!this.gcStatistics) return;
-    this.counters.gc_wall_s += this.now() - Tracer.force(beginTime);
-    this.counters.num_minor_GCs += 1;
+    this.counters.last_gc_started = this.now();
+  }
+
+  /**
+   * Trace a cancelled garbage collection.
+   */
+  traceCancelGC() {
+    if (!this.gcStatistics) return;
+    this.counters.gc_wall_s += this.now() - this.counters.last_gc_started;
+    this.counters.num_canceled_GCs += 1;
   }
 
   /**
    * Trace the end of a garbage collection.
-   * @param beginTime is the time when the GC has started
    */
-  traceMajorGC(beginTime) {
+  traceEndGC() {
     if (!this.gcStatistics) return;
-    this.counters.gc_wall_s += this.now() - Tracer.force(beginTime);
-    this.counters.num_major_GCs += 1;
+    this.counters.gc_wall_s += this.now() - this.counters.last_gc_started;
+    this.counters.num_GCs += 1;
   }
 
   /**
@@ -136,8 +144,8 @@ export class Tracer {
       aliveVSDeadMBlocks /= counters.aliveVSDeadMBlocks.length;
     }
     console.log("Garbage Collection Statistics", {
-      num_major_GCs: counters.num_major_GCs,
-      num_minor_GCs: counters.num_minor_GCs,
+      num_GCs: counters.num_GCs,
+      num_canceled_GCs: counters.num_canceled_GCs,
       average_live_mblocks: liveMBlocksAverageNo,
       alive_vs_dead_mblocks: aliveVSDeadMBlocks,
       allocated_mblocks: counters.allocatedMBlocks,
