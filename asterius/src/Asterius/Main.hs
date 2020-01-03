@@ -172,7 +172,8 @@ genExportStablePtrs sym_map export_funcs FFIMarshalState {..} =
 genReq :: Task -> LinkReport -> Builder
 genReq task LinkReport {..} =
   mconcat
-    [ "export default {jsffiFactory: ",
+    [ "export default (async () => {return {",
+      "jsffiFactory: ",
       generateFFIImportObjectFactory bundledFFIMarshalState,
       ", exports: ",
       generateFFIExportObject bundledFFIMarshalState,
@@ -194,7 +195,13 @@ genReq task LinkReport {..} =
       if yolo task then "true" else "false",
       ", gcThreshold: ",
       intHex (gcThreshold task),
-      "}",
+      -- target-specific import
+      ", targetSpecific: await import('./",
+      (case target task of
+          Node -> "node"
+          Browser -> "browser"),
+      "/specific.mjs')",
+      "}})()",
       ";\n"
     ]
   where
@@ -217,14 +224,14 @@ genDefEntry task =
       "import module from \"./",
       out_base,
       ".wasm.mjs\";\n",
-      "import req from \"./",
+      "import reqPromise from \"./",
       out_base,
       ".req.mjs\";\n",
       case target task of
         Node -> "process.on(\"unhandledRejection\", err => { throw err; });\n"
         Browser -> mempty,
       mconcat
-        [ "module.then(m => rts.newAsteriusInstance(Object.assign(req, {module: m}))).then(async i => {\n",
+        [ "reqPromise.then(req => module.then(m => rts.newAsteriusInstance(Object.assign(req, {module: m}))).then(async i => {\n",
           "try {\n",
           "i.exports.hs_init();\n",
           "await i.exports.main();\n",
@@ -235,7 +242,7 @@ genDefEntry task =
           "}\n",
           "if (i.stdio.stdout().toString().length) console.log(i.stdio.stdout());\n",
           "if (i.stdio.stderr().toString().length) console.log(i.stdio.stderr());\n",
-          "});\n"
+          "}));\n"
         ]
     ]
   where
@@ -396,9 +403,16 @@ ahcDistMain logger task (final_m, report) = do
     "[INFO] Writing JavaScript runtime modules to "
       <> show
         (outputDirectory task)
-  rts_files <- listDirectory $ dataDir </> "rts"
+  rts_files' <- listDirectory $ dataDir </> "rts"
+  let rts_files = filter (\x -> x /= "browser" && x /= "node") rts_files'
   for_ rts_files $
     \f -> copyFile (dataDir </> "rts" </> f) (outputDirectory task </> f)
+  let specificFolder =
+        case target task of
+          Node -> "node"
+          Browser -> "browser"
+  createDirectoryIfMissing False (outputDirectory task </> specificFolder)
+  copyFile (dataDir </> "rts" </> specificFolder </> "specific.mjs") (outputDirectory task </> specificFolder </> "specific.mjs")
   logger $ "[INFO] Writing JavaScript loader module to " <> show out_wasm_lib
   builderWriteFile out_wasm_lib $
     genWasm (target task == Node) (outputBaseName task)
