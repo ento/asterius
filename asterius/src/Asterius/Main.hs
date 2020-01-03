@@ -16,6 +16,7 @@ import qualified Asterius.Backends.WasmToolkit as WasmToolkit
 import Asterius.BuildInfo
 import Asterius.Internals
 import Asterius.Internals.ByteString
+import Asterius.Internals.Marshal
 import Asterius.Internals.Temp
 import Asterius.JSFFI
 import Asterius.JSGen.Wasm
@@ -29,6 +30,7 @@ import Asterius.Types
     Module,
   )
 import Control.Monad
+import Control.Monad.Cont
 import Control.Monad.Except
 import Data.Binary.Get
 import Data.Binary.Put
@@ -331,6 +333,10 @@ ahcDistMain logger task (final_m, report) = do
           final_m
       when (optimizeLevel task > 0 || shrinkLevel task > 0) $ do
         logger "[INFO] Running binaryen optimization"
+        flip runContT pure $ do
+          _flatten <- marshalSBS "flatten"
+          (_flatten_ptr, _) <- marshalV [_flatten]
+          lift $ Binaryen.c_BinaryenModuleRunPasses m_ref _flatten_ptr 1
         Binaryen.c_BinaryenModuleOptimize m_ref
       logger "[INFO] Validating binaryen IR"
       pass_validation <- Binaryen.c_BinaryenModuleValidate m_ref
@@ -383,6 +389,10 @@ ahcDistMain logger task (final_m, report) = do
                 (LBS.toStrict $ toLazyByteString $ execPut $ putModule r)
                 $ \(p, l) -> Binaryen.c_BinaryenModuleRead p (fromIntegral l)
             logger "[INFO] Running binaryen optimization"
+            flip runContT pure $ do
+              _flatten <- marshalSBS "flatten"
+              (_flatten_ptr, _) <- marshalV [_flatten]
+              lift $ Binaryen.c_BinaryenModuleRunPasses m_ref _flatten_ptr 1
             Binaryen.c_BinaryenModuleOptimize m_ref
             b <- Binaryen.serializeModule m_ref
             Binaryen.c_BinaryenModuleDispose m_ref
